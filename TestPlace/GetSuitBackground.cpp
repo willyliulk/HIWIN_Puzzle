@@ -85,8 +85,6 @@ int main() {
 		calcHist(&HSVimg, 1, &channels, mask, histOutV, 1, &histsize, &ranges);
 
 
-
-
 		vector<Mat> HSVimgs({ histOutH , histOutS , histOutV });
 		Mat HistImg(400, 256 * 2, CV_8UC3);
 		HistImg.setTo(0);
