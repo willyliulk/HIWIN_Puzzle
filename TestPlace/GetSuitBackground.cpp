@@ -139,10 +139,10 @@ int main() {
 
 		//cout << "程:" << greyMax << "程:" << greyMin << endl;
 		//cout << "程At:" << MaxLoc.y << "程At:" << MinLoc.y << endl;
-		rectangle(camInput, myROI, Scalar(0, 255, 0));
-		putText(camInput, to_string(minH), Point(0, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
-		putText(camInput, to_string(minS), Point(0, 60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
-		putText(camInput, to_string(minV), Point(0, 90), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
+		//rectangle(camInput, myROI, Scalar(0, 255, 0));
+		//putText(camInput, to_string(minH), Point(0, 30), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
+		//putText(camInput, to_string(minS), Point(0, 60), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
+		//putText(camInput, to_string(minV), Point(0, 90), FONT_HERSHEY_SIMPLEX, 1, Scalar(0, 0, 255));
 
 		imshow(camWin, camInput);
 		if (waitKey(1) == 'q') break;

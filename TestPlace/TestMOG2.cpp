@@ -8,7 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 
-#define SAVE_PATH R"(D:\比賽\2021 上銀機器手臂\test mtr\puzzles\)"
+#define SAVE_PATH R"(D:\比賽\2021HIWIN\testmtr\puzzles\)"
 #define SELECT_HSV false
 #define SELECT_AREA false
 
@@ -37,13 +37,8 @@ using namespace std;
 using namespace cv;
 
 Point Centroid(vector<Point> contour) {
-	double x = 0, y = 0;
-	double s = contour.size();
-	for (auto p : contour) {
-		x += p.x;
-		y += p.y;
-	}
-	return Point(x / s, y / s);
+	Moments  mu = moments(contour, false);
+	return Point(mu.m10 / mu.m00, mu.m01 / mu.m00);
 }
 
 int main() {
@@ -79,11 +74,11 @@ int main() {
 	}
 
 	cap >> camIn;
-
-	Rect myROI(48, 20, 567, 400);
+	//560 x 395 from (36, 66)
+	Rect myROI(36, 66, 560, 395);
 	Mat outROI(Size(camIn.cols, camIn.rows), CV_8UC1);
 	outROI.setTo(255);
-	///myROI = selectROI(camIn);
+	//myROI = selectROI(camIn);
 	rectangle(outROI, myROI, 0, -1);
 	//imshow("roi", outROI);
 	cout << "~~~~~~~~~~~~~" << myROI << "~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -112,16 +107,19 @@ int main() {
 	{
 		Mat HSVOutput,
 			inRangeOutput,
+			morOutput,
 			mask;
 		Mat greenMat, camblack;
 
 		cap >> camIn;
 
+
 		camOrig = camIn.clone();
 
 		cvtColor(camIn, HSVOutput, COLOR_RGB2HSV);
 		inRange(HSVOutput, Scalar(Hl, Vl, Sl), Scalar(Hh, Sh, Vh), inRangeOutput);
-		bitwise_or(inRangeOutput, outGreenMat, mask);
+		morphologyEx(inRangeOutput, morOutput, MORPH_CLOSE, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		bitwise_or(morOutput, outGreenMat, mask);
 		camIn.setTo(0, mask);
 		inRangeOutput.copyTo(greenMat);
 		bitwise_not(mask, camblack);
@@ -135,6 +133,7 @@ int main() {
 		findContours(camblack, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 		double x, y;
+		int cons = 1;
 		for (auto contour : contours) {
 			//Rect tempRect = boundingRect(contour);
 			//if (tempRect.area() < Amin) continue;
@@ -156,7 +155,8 @@ int main() {
 				halfBox * 2);
 			circle(camIn, centroid, 2, Scalar(0, 255, 0), -1);
 			rectangle(camIn, tempRect, Scalar(0, 255, 0));
-
+			putText(camIn, to_string(cons), centroid - Point(50, 50), FONT_HERSHEY_PLAIN, 1, Scalar(255, 150, 0));
+			cons++;
 			//Mat subMat= camblack()
 		}
 		//-------------find rect------------
@@ -207,8 +207,10 @@ int main() {
 				//imshow("1", subOut);
 				//Mat subMatOut;
 				//camOrig.copyTo(subMatOut, subMatMask);
-				imwrite(savePath + to_string(i) + ".png", subOut);
-
+				cout << "writting " << savePath + to_string(i) << endl;
+				imwrite(savePath + to_string(i) + "-3" + ".png", subOut);
+				imwrite(savePath + "kk.png", camIn);
+				cout << "done" << endl;
 				//Mat subMat= camblack()
 				i++;
 				//break;
