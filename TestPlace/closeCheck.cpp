@@ -11,6 +11,8 @@
 using namespace std;
 using namespace cv;
 
+#define contour_t  vector<Point>
+
 Mat removeTouchBorder(Mat InputMat) {
 
 	uchar white(255);
@@ -59,22 +61,29 @@ int main() {
 	{
 		Mat camIn;
 		Mat temp;
+		vector<Mat> temp2;
 		Mat output;
 		vector<vector<Point>> contours;
 		vector<Point2d> centroids;
+		vector<int> valid_contour_index;
+		vector<RotatedRect> minAreaRects;
 		cap >> camIn;
 		int Hh = 68, Hl = 24, Sh = 255, Sl = 0, Vh = 139, Vl = 0;
 		temp = camIn.clone();
-		blur(temp, temp, Size(5,5));
+		blur(temp, temp, Size(5, 5));
 		cvtColor(temp, temp, COLOR_RGB2HSV);
 		inRange(temp, Scalar(Hl, Sl, Vl), Scalar(Hh, Sh, Vh), temp);
-		temp = 255 - temp;
-		morphologyEx(temp, temp, MORPH_CLOSE, getStructuringElement(MORPH_RECT, Size(3, 3)));
-		temp = removeTouchBorder(temp);
+		temp = 255 - temp;	
 		morphologyEx(temp, temp, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		morphologyEx(temp, temp, MORPH_CLOSE, getStructuringElement(MORPH_RECT, Size(3, 3)));
+		//temp = removeTouchBorder(temp);
 
-		findContours(temp, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-		for (auto c : contours) {
+		findContours(temp, contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
+		for (int i = 0; i < contours.size(); i++) {
+			contour_t &c = contours[i];
+			//cout << contourArea(c) << " ,\t ";
+			if (contourArea(c) < 50000.) continue;
 			Point2d centroid;
 			int pNum = 0;
 			for (auto p : c) {
@@ -84,21 +93,38 @@ int main() {
 			}
 			centroid = centroid / pNum;
 			centroids.push_back(centroid);
+			valid_contour_index.push_back(i);
+			minAreaRects.push_back(minAreaRect(c));
 		}
+		//cout << endl;
 
 		output = temp.clone();
 		cvtColor(output, output, COLOR_GRAY2RGB);
 		cvtColor(output, output, COLOR_RGB2HSV);
-		if (contours.empty() == false) {
+		if (centroids.size() != 0) {
 			int colorStep = 255 / centroids.size();
 			for (int i = 0; i < centroids.size(); i++) {
 				circle(output, centroids[i], 2, Scalar((colorStep*i), 255, 255), -1);
-				drawContours(output, contours, i, Scalar((colorStep*i), 255, 255));
+				drawContours(output, contours, valid_contour_index[i], Scalar((colorStep*i)+20, 255, 255));
+				vector<Point> rRect;
+				Point2f p2f[4];
+				minAreaRects[i].points(p2f);
+				for (int j = 0; j < 4; j++) {
+					rRect.push_back(p2f[j]);
+				}
+				cout << rRect << endl;
+				polylines(output, rRect, true, Scalar(40, 255, 255));
+				cout << minAreaRects[i].angle << " , ";
 			}
-
+			cout << endl;
 		}
+		putText(output, String(to_string(contours.size())), Point(10, 10), FONT_HERSHEY_PLAIN, 3, Scalar(255, 255, 0));
 		cvtColor(output, output, COLOR_HSV2RGB);
+		Mat oI = camIn.clone();
+		output = 255 - output;
+		oI.setTo(0, output);
 		imshow("check", output);
+		imshow("orig", camIn);
 		if (waitKey(1) == 'q') break;
 	}
 
