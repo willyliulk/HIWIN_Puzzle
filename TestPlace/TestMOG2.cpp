@@ -10,7 +10,7 @@
 
 #define SAVE_PATH R"(D:\§Ò¡…\2021HIWIN\testmtr\puzzles\)"
 #define SELECT_HSV false
-#define SELECT_AREA false
+#define SELECT_AREA true
 #define SAVE_IMAGE false
 
 #if SELECT_HSV
@@ -49,7 +49,7 @@ Point Centroid(vector<Point> contour) {
 }
 
 int main() {
-	VideoCapture cap(3);
+	VideoCapture cap(0);
 	if (cap.isOpened() == false) {
 		cout << "~~~~~~~~~~~~~~~camera~~~~~~~~~~~~~~~~";
 		return 1;
@@ -75,6 +75,8 @@ int main() {
 
 	Mat camIn, camOrig;
 
+	cap >> camIn;
+	imshow("start", camIn);
 
 	for (int i = 0; i < 20; i++) {
 		cap >> camIn;
@@ -85,7 +87,7 @@ int main() {
 	Rect myROI(36, 50, 560, 395);
 	Mat outROI(Size(camIn.cols, camIn.rows), CV_8UC1);
 	outROI.setTo(255);
-	//myROI = selectROI(camIn);
+	myROI = selectROI(camIn);
 	rectangle(outROI, myROI, 0, -1);
 	//imshow("roi", outROI);
 	cout << "~~~~~~~~~~~~~" << myROI << "~~~~~~~~~~~~~~~~~~~~~~" << endl;
@@ -98,15 +100,23 @@ int main() {
 			inverOutput;
 		vector<vector<Point>> contours;
 
+		medianBlur(camIn, camIn, 5);
+		imshow("6", camIn);
 		cvtColor(camIn, HSVOutput, COLOR_RGB2HSV);
 		inRange(HSVOutput, Scalar(Hl, Vl, Sl), Scalar(Hh, Sh, Vh), inRangeOutput);
 		camIn.setTo(0, inRangeOutput);
 		morphologyEx(inRangeOutput, morphologyOutput, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE, Size(15, 15)));
 
+
 		findContours(morphologyOutput, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 		fillPoly(morphologyOutput, contours, Scalar(255, 255, 255));
 		bitwise_not(morphologyOutput, inverOutput);
 		bitwise_or(inverOutput, outROI, outGreenMat);
+		//imshow("1", HSVOutput);
+		//imshow("2", inRangeOutput);
+		//imshow("3", morphologyOutput);
+		//imshow("4", inverOutput);
+		//imshow("5", outROI);
 	}
 	//imshow("out green", outGreenMat);
 
@@ -130,28 +140,30 @@ int main() {
 		inRangeOutput.copyTo(greenMat);
 		bitwise_not(mask, camblack);
 
+		//imshow("1", inRangeOutput);
+		//imshow("2", morOutput);
+		//imshow("3", mask);
+		//imshow("4", camblack);
+
 		//------------find rect------------
 		vector<vector<Point>> contours;
 		vector<Rect> rects;
+		Mat showTemp = camblack.clone();
+		cvtColor(showTemp, showTemp, COLOR_GRAY2RGB);
 
 		findContours(camblack, contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
+		drawContours(showTemp, contours, -1, (255, 0, 255), 2);
+		imshow("show", showTemp);
 
 		double x, y;
 		int cons = 1;
 		for (auto contour : contours) {
-			//Rect tempRect = boundingRect(contour);
-			//if (tempRect.area() < Amin) continue;
-			//if (tempRect.area() > Amax) continue;
-			//if (tempRect.tl().x <= 20 ||
-			//	tempRect.tl().y <= 20 ||
-			//	tempRect.br().x >= camIn.cols - 10 ||
-			//	tempRect.br().y >= camIn.rows - 10) continue;
-			//rects.push_back(tempRect);
-			//rectangle(camIn, tempRect, Scalar(0, 255, 0));
+
 			int halfBox = 50;
 			if (contourArea(contour) < 150) continue;
 			if (boundingRect(contour).area() > 7000)continue;
-			//fillPoly(camIn, contour, Scalar(0, 255, 0));
+
 			Point centroid = Centroid(contour);
 			Rect tempRect = Rect(centroid.x - halfBox,
 				centroid.y - halfBox,
@@ -219,11 +231,11 @@ int main() {
 				message += to_string(i);
 				message += ",";
 				message += to_string(tempRect.tl().x);
-				message += ",";		  
+				message += ",";
 				message += to_string(tempRect.tl().y);
-				message += ",";		  
+				message += ",";
 				message += to_string(tempRect.br().x);
-				message += ",";		  
+				message += ",";
 				message += to_string(tempRect.br().y);
 				message += ",";
 				message += to_string(r.angle);
