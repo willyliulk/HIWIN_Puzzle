@@ -11,7 +11,7 @@
 
 using namespace std;
 
-#define _DEBUG 1
+#define _DEBUG 0
 
 namespace HIWIN_Puzzle{
 	void DEBUG_MSG(string s);
@@ -78,7 +78,7 @@ namespace HIWIN_Puzzle{
 		vector<cv::Mat> puzzles;
 		cv::Mat img_debug;
 
-		bool modiROI = false, modiHSV = false;;
+		bool modiROI=false, modiHSV=false;;
 
 
 		/*給入contour 回傳形心*/

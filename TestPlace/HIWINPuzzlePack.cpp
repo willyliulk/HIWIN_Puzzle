@@ -13,7 +13,7 @@ HIWIN_Puzzle::RotationFinder::RotationFinder()
 
 HIWIN_Puzzle::RotationFinder::RotationFinder(cv::Mat puzIn)
 {
-	cout << "you are using overload RotationFinder constructor.\n";
+	DEBUG_MSG("you are using overload RotationFinder constructor.");
 	this->find(puzIn);
 }
 
@@ -51,12 +51,16 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 
 	cv::Mat labels, stats, centroids;
 	int nConnect = cv::connectedComponentsWithStats(_puzz_distance, labels, stats, centroids);
+
+#if _DEBIG
 	cout << "we get " << nConnect << " connect space\n";
 	cout << "cnetrouds:\n";
 	cout << centroids << endl;
 	cout << centroids.type() << endl;
 	cout << centroids.at<double>(1, 0) << endl;
 	cout << centroids.at<double>(1, 1) << endl;
+#endif // _DEBIG
+
 	this->centroid_distance.x = centroids.at<double>(1, 0);
 	this->centroid_distance.y = centroids.at<double>(1, 1);
 
@@ -73,7 +77,7 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 	cv::circle(_puzz_gray, centroid_distance, 1, 0, -1);
 	this->angle_result = atan2(centroid_shape.x - centroid_distance.x,
 		centroid_shape.y - centroid_distance.y);
-	cv::imshow("apple", _puzz_gray);
+	//cv::imshow("apple", _puzz_gray);
 
 	cout << centroid_distance << endl;
 	cout << centroid_shape << endl;
@@ -121,19 +125,19 @@ void HIWIN_Puzzle::PuzzleFinder::init(cv::Mat source)
 	img_orig = source.clone();
 
 	DEBUG_MSG("init human select ROI region.\n");
-	if (modiROI) {
-		cout << "rect_ROI is empty. use default ROI region \n";
-		cout << "ROI value (x, y, width, height):\n";
-		cout << rect_ROI;
+	if (modiROI == false) {
+		cerr << "rect_ROI is empty. use default ROI region \n";
+		cerr << "ROI value (x, y, width, height):\n";
+		cerr << rect_ROI << endl;
 	}
 
-	if (modiHSV) {
-		cout << "You have'n change HSV value. Use default value.\n";
-		cout << "HSV range:\n";
-		cout << "Upper Bound:\n";
-		cout << HSV_Upper;
-		cout << "Lower Bound:\n";
-		cout << HSV_Lower;
+	if (modiHSV == false) {
+		cerr << "You have'n change HSV value. Use default value.\n";
+		cerr << "HSV range:\n";
+		cerr << "Upper Bound:\n";
+		cerr << HSV_Upper << endl;
+		cerr << "Lower Bound:\n";
+		cerr << HSV_Lower << endl;
 	}
 	mask_ROI = cv::Mat::ones(img_orig.rows, img_orig.cols, CV_8U);
 	mask_ROI = 255 * mask_ROI;
@@ -144,7 +148,10 @@ void HIWIN_Puzzle::PuzzleFinder::init(cv::Mat source)
 	cv::medianBlur(img_inProcess, img_inProcess, 5);
 	cv::cvtColor(img_inProcess, img_inProcess, cv::COLOR_RGB2HSV);
 	cv::inRange(img_inProcess, HSV_Lower, HSV_Upper, img_inProcess);
+#if _DEBUG
 	cout << HSV_Lower << HSV_Upper << endl;
+
+#endif // _DEBUG
 
 	cv::Mat kernal = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(15, 15));
 	cv::morphologyEx(img_inProcess, img_inProcess, cv::MORPH_CLOSE, kernal);
@@ -188,27 +195,24 @@ void HIWIN_Puzzle::PuzzleFinder::compute(cv::Mat source)
 	vector<cv::Rect> rects;
 	int cons = 1;
 
-	cv::imshow("test", img_BW_onlyPuzz);
-	cv::waitKey(0);
+	//cv::imshow("test", img_BW_onlyPuzz);
+	//cv::waitKey(0);
 
 
 	cv::findContours(img_BW_onlyPuzz, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
-	img_debug = img_orig.clone();
-	cv::drawContours(img_debug, contours, -1, cv::Scalar(0, 0, 255), 3);
 	DEBUG_MSG("crop puzzles piece");
 	DEBUG_MSG(to_string(contours.size()));
 	for (auto contour : contours) {
-		cout << "hi" << endl;
-		cout << cv::contourArea(contour) << "---" << cv::boundingRect(contour).area() << endl;
+		DEBUG_MSG("hi");
 		if (cv::contourArea(contour) < 150) {
-			cout << "aout\n";
+			DEBUG_MSG("aout");
 			continue;
 		}
 		if (cv::boundingRect(contour).area() > 20000) {
-			cout << "bout\\n";
-			continue; 
+			DEBUG_MSG("bout");
+			continue;
 		}
-		
+
 		cv::Point centroid = Centroid(contour);
 		cv::Rect tempRect(centroid.x - halfBox,
 			centroid.y - halfBox,
@@ -226,6 +230,9 @@ void HIWIN_Puzzle::PuzzleFinder::compute(cv::Mat source)
 
 		puzzles.push_back(subImg_onePuzz.clone());
 
+		//make debug img
+		img_debug = source.clone();
+		cv::drawContours(img_debug, contours, -1, cv::Scalar(0, 0, 255), 2);
 		cv::circle(img_debug, centroid, 2, cv::Scalar(0, 255, 0), -1);
 		cv::rectangle(img_debug, tempRect, cv::Scalar(0, 255, 0));
 		cv::putText(img_debug, to_string(cons), centroid - cv::Point(50, 50), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255, 150, 0));
@@ -238,11 +245,13 @@ void HIWIN_Puzzle::PuzzleFinder::setHSV(cv::Scalar lower, cv::Scalar upper)
 {
 	HSV_Lower = lower;
 	HSV_Upper = upper;
+	modiROI = true;
 }
 
 void HIWIN_Puzzle::PuzzleFinder::setROI(cv::Rect ROI)
 {
 	rect_ROI = ROI;
+	modiHSV = true;
 }
 
 vector<cv::Mat> HIWIN_Puzzle::PuzzleFinder::getImages()
@@ -262,6 +271,7 @@ cv::Mat HIWIN_Puzzle::PuzzleFinder::getDebugImg()
 {
 	if (img_debug.empty()) {
 		cerr << "DebugImg  empty. please use compute(cv::Mat) first.";
+		return cv::Mat::zeros(halfBox * 2, halfBox * 2, CV_8U);
 	}
 	return img_debug.clone();
 }
