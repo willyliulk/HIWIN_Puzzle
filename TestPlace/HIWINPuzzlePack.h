@@ -9,8 +9,6 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/aruco.hpp>
-#include <apriltag.h>
-#include <tag36h11.h>
 
 using namespace std;
 
@@ -20,6 +18,8 @@ namespace HIWIN_Puzzle {
 	void DEBUG_MSG(string s);
 
 	cv::Mat Transform_Matrix_Count(cv::Mat Camera_Matrix);
+
+	cv::Mat Sharpen(cv::Mat blurImg, cv::Mat &sharpImg, int sigma=3);
 
 	class RotationFinder {
 	private:
@@ -90,7 +90,7 @@ namespace HIWIN_Puzzle {
 		vector<cv::Rect> boundingBoxes;
 		cv::Mat img_debug;
 
-		bool modiROI = false, modiHSV = false;
+		bool modiROI = false, modiHSV = false;;
 
 
 		/*給入contour 回傳形心*/
@@ -104,15 +104,10 @@ namespace HIWIN_Puzzle {
 		MarkerFinder();
 		~MarkerFinder();
 
-		/*輸入圖片找Tag*/
 		cv::Mat compute(cv::Mat inImage);
-		/*取得所有Tag角點*/
 		vector<vector<cv::Point2f>> getCornerPoints();
-		/*取得所有Tag中心點*/
 		vector<cv::Point2f> getMarkerCenters();
-		/*取得所有Tag Debug圖*/
 		cv::Mat getDebugImage();
-		/*取得所有Tag ID*/
 		vector<int> getMarkerIds();
 
 		typedef struct markerData_t
@@ -122,11 +117,10 @@ namespace HIWIN_Puzzle {
 			int id;
 		};
 
-		/*取得所有Tag 資訊*/
 		vector<markerData_t> getMarkerData();
 
 		cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-		//cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
+		cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
 	private:
 		vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
 
@@ -134,7 +128,6 @@ namespace HIWIN_Puzzle {
 		vector<cv::Point2f> markerCenters;
 		std::vector<int> markerIds;
 		vector<markerData_t> markerDatas;
-
 	};
 
 }
