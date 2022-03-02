@@ -31,7 +31,7 @@ int main() {
 	do {
 		cap >> Img;
 
-		HIWIN_Puzzle::Sharpen(Img, Img);
+		//HIWIN_Puzzle::Sharpen(Img, Img);
 
 		//Mat Img = imread("hav.png");
 		Img = mFinder.compute(Img);
