@@ -7,26 +7,14 @@ void HIWIN_Puzzle::DEBUG_MSG(string s)
 #endif // _DEBUG
 }
 
-cv::Mat HIWIN_Puzzle::Transform_Matrix_Count(cv::Mat Camera_Matrix)
+cv::Mat HIWIN_Puzzle::Transform_Matrix_Count(cv::Mat Camera_Matrix)/*傳入REALSENSE讀取之實際座標位置*/
 {
-	float Robot_Value[9] = { 0,30,0,0,0,15,1,1,1 };
+	float Robot_Value[9] = { 0,28,0,0,0,22.5,1,1,1 };/*標記點實際位置*/
 	cv::Mat Robot_Matrix = cv::Mat(cv::Size(3, 3), CV_32FC1, Robot_Value);
 	cv::Mat Camera_Matrix_Inv = Camera_Matrix.inv();
 	cv::Mat Transform_Matrix = Robot_Matrix * Camera_Matrix_Inv;
 	return Transform_Matrix;
 
-}
-
-cv::Mat HIWIN_Puzzle::Sharpen(cv::Mat blurImg, cv::Mat &sharpImg, int sigma)
-{
-	cv::Mat temp=blurImg.clone();
-	//cv::GaussianBlur(blurImg, temp, cv::Size(0, 0), sigma);
-	//cv::addWeighted(blurImg, 1.5, temp, -0.5, 0, temp);
-	
-	cv::Mat kernal = (cv::Mat)
-
-	sharpImg = temp;
-	return temp;
 }
 
 HIWIN_Puzzle::RotationFinder::RotationFinder()
@@ -49,7 +37,7 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 		cerr << "you give " << puzzle.channels() << " channels image\n";
 		return -1;
 	}
-	if (puzzle.rows != 100, puzzle.cols != 100) {
+	if (puzzle.rows != 180, puzzle.cols != 180) {
 		cerr << "error at HIWIN_Puzzle::RotationFinder::find \n";
 		cerr << "please giva a 100x100 image\n";
 		cerr << "you give " << puzzle.rows << "x" << puzzle.cols << "\n";
@@ -63,14 +51,14 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 	cv::Mat _puzz_gray;
 	double _maxInDistance, _disp;
 
-	imshow("test1", puzzle);
+	//imshow("test1", puzzle);
 	cv::cvtColor(_puzzleCopy, _puzzleCopy, cv::COLOR_RGBA2GRAY);
 	_puzz_gray = _puzzleCopy.clone();
 	cv::distanceTransform(_puzzleCopy, _puzz_distance, cv::DIST_L2, cv::DIST_MASK_3);
-	imshow("test2", _puzz_distance);
+	//imshow("test2", _puzz_distance);
 	cv::minMaxLoc(_puzz_distance, &_disp, &_maxInDistance);
 	cv::threshold(_puzz_distance, _puzz_distance, 0.7*_maxInDistance, 255, cv::THRESH_BINARY);
-	imshow("test3", _puzz_distance);
+	//imshow("test3", _puzz_distance);
 	_puzz_distance.convertTo(_puzz_distance, CV_8UC1);
 
 	cv::Mat labels, stats, centroids;
@@ -101,7 +89,7 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 	cv::circle(_puzz_gray, centroid_distance, 1, 0, -1);
 	this->angle_result = atan2(centroid_shape.x - centroid_distance.x,
 		centroid_shape.y - centroid_distance.y);
-	cv::imshow("test4", _puzz_gray);
+	//cv::imshow("test4", _puzz_gray);
 
 	cout << centroid_distance << endl;
 	cout << centroid_shape << endl;
@@ -115,8 +103,6 @@ double HIWIN_Puzzle::RotationFinder::get_angle()
 		cerr << "you need to pass a puzzle using find() first.\n";
 		return -99999;
 	}
-
-
 	return angle_result;
 }
 
@@ -125,7 +111,7 @@ cv::Mat HIWIN_Puzzle::RotationFinder::get_image()
 	DEBUG_MSG("you are at RotationFinder::get_image()");
 	if (this->puzzle.empty()) {
 		cerr << "you need to pass a puzzle using find() first.\n";
-		return cv::Mat::zeros(100, 100, CV_8U);
+		return cv::Mat::zeros(180, 180, CV_8U);
 	}
 	return this->puzzle.clone();
 }
@@ -226,13 +212,14 @@ void HIWIN_Puzzle::PuzzleFinder::compute(cv::Mat source)
 	cv::findContours(img_BW_onlyPuzz, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_NONE);
 	DEBUG_MSG("crop puzzles piece");
 	DEBUG_MSG(to_string(contours.size()));
+	img_debug = source.clone();
 	for (auto contour : contours) {
 		DEBUG_MSG("hi");
-		if (cv::contourArea(contour) < 150) {
+		if (cv::contourArea(contour) < 5800) {
 			DEBUG_MSG("aout");
 			continue;
 		}
-		if (cv::boundingRect(contour).area() > 20000) {
+		if (cv::boundingRect(contour).area() > 22000) {
 			DEBUG_MSG("bout");
 			continue;
 		}
@@ -257,11 +244,11 @@ void HIWIN_Puzzle::PuzzleFinder::compute(cv::Mat source)
 		boundingBoxes.push_back(tempRect);
 
 		//make debug img
-		img_debug = source.clone();
+		//img_debug = source.clone();
 		cv::drawContours(img_debug, contours, -1, cv::Scalar(0, 0, 255), 2);
 		cv::circle(img_debug, centroid, 2, cv::Scalar(0, 255, 0), -1);
 		cv::rectangle(img_debug, tempRect, cv::Scalar(0, 255, 0));
-		cv::putText(img_debug, to_string(cons), centroid - cv::Point(50, 50), cv::FONT_HERSHEY_PLAIN, 1, cv::Scalar(255, 150, 0));
+		cv::putText(img_debug, to_string(cons), centroid - cv::Point(70, 70), cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(255, 0, 255), 2, 8, 0);
 		cons++;
 	}
 	DEBUG_MSG("conputing finish\n");
@@ -299,6 +286,7 @@ cv::Mat HIWIN_Puzzle::PuzzleFinder::getDebugImg()
 		cerr << "DebugImg  empty. please use compute(cv::Mat) first.";
 		return cv::Mat::zeros(halfBox * 2, halfBox * 2, CV_8U);
 	}
+	cv::rectangle(img_debug, rect_ROI, cv::Scalar(255, 230, 200),3);
 	return img_debug.clone();
 }
 
@@ -336,7 +324,8 @@ cv::Point HIWIN_Puzzle::PuzzleFinder::Centroid(vector<cv::Point> contour)
 
 HIWIN_Puzzle::MarkerFinder::MarkerFinder()
 {
-	parameters->cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
+	//parameters->cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
+	//parameters->aprilTagQuadDecimate = 2.0;
 }
 
 HIWIN_Puzzle::MarkerFinder::~MarkerFinder()
@@ -348,15 +337,50 @@ cv::Mat HIWIN_Puzzle::MarkerFinder::compute(cv::Mat inImage)
 	inImg = inImage.clone();
 	cv::Mat gray = inImage.clone();
 	cv::cvtColor(gray, gray, cv::COLOR_RGB2GRAY);
-	
-	//灰階反轉
-	//gray = 255 - gray;
-	threshold(gray, gray, 200, 255, CV_THRESH_BINARY_INV);
-	cv::Mat show;
-	resize(gray, show, cv::Size(1920, 1080) / 2);
-	cv::imshow("s", show);
 
-	cv::aruco::detectMarkers(gray, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
+	//灰階反轉
+	threshold(gray, gray, 150, 255, CV_THRESH_BINARY_INV);
+	
+	image_u8_t img_header = { gray.cols, gray.rows, gray.cols, gray.data };
+	apriltag_family_t *tagFamily = tag36h11_create();
+	apriltag_detector_t *detector = apriltag_detector_create();
+	apriltag_detector_add_family(detector, tagFamily);
+	zarray *detections = apriltag_detector_detect(detector, &img_header);
+	detector->quad_decimate = 2.0;
+
+	markerCenters.clear();
+	markerCorners.clear();
+	markerIds.clear();
+
+	if (zarray_size(detections) == 0) {
+		cout << "no found" << endl;
+		tag36h11_destroy(tagFamily);
+		apriltag_detector_destroy(detector);
+		zarray_destroy(detections);
+		return inImage;
+	}
+
+	for (int i = 0; i < zarray_size(detections); i++) {
+		apriltag_detection_t *det;
+		zarray_get(detections, i, &det);
+
+		cv::Point2f tagCenter(det->c[0], det->c[1]);
+		markerCenters.push_back(tagCenter);
+
+		vector<cv::Point2f> oneMarkerCorner;
+		oneMarkerCorner.push_back(cv::Point(det->p[0][0], det->p[0][1]));
+		oneMarkerCorner.push_back(cv::Point(det->p[1][0], det->p[1][1]));
+		oneMarkerCorner.push_back(cv::Point(det->p[2][0], det->p[2][1]));
+		oneMarkerCorner.push_back(cv::Point(det->p[3][0], det->p[3][1]));
+		markerCorners.push_back(oneMarkerCorner);
+
+		markerIds.push_back(det->id);
+		apriltag_detection_destroy(det);
+	}
+
+	tag36h11_destroy(tagFamily);
+	apriltag_detector_destroy(detector);
+	zarray_destroy(detections);
 
 	return inImage;
 }
@@ -368,17 +392,22 @@ vector<vector<cv::Point2f>> HIWIN_Puzzle::MarkerFinder::getCornerPoints()
 
 vector<cv::Point2f> HIWIN_Puzzle::MarkerFinder::getMarkerCenters()
 {
-	markerCenters.clear();
-	for (auto pts : markerCorners) {
-		markerCenters.push_back( (pts[0] + pts[2]) / 2 );
-	}
 	return markerCenters;
 }
 
 cv::Mat HIWIN_Puzzle::MarkerFinder::getDebugImage()
 {
 	debugImage = inImg.clone();
-	cv::aruco::drawDetectedMarkers(debugImage, markerCorners);
+	for (int i = 0; i < markerIds.size(); i++) {
+		cv::putText(debugImage, to_string(markerIds[i]), markerCenters[i], cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0, 255, 0), 2, false);
+		cv::circle(debugImage, markerCenters[i], 2, cv::Scalar(0, 255, 0), 1);
+
+		cv::circle(debugImage, markerCorners[i][0], 2, cv::Scalar(0, 0, 255), 1);
+		cv::circle(debugImage, markerCorners[i][1], 2, cv::Scalar(0, 255, 0), 1);
+		cv::circle(debugImage, markerCorners[i][2], 2, cv::Scalar(255, 0, 0), 1);
+		cv::circle(debugImage, markerCorners[i][3], 2, cv::Scalar(0, 255, 255), 1);
+
+	}
 	return debugImage;
 }
 
