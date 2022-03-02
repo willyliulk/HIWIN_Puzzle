@@ -8,13 +8,18 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/aruco.hpp>
 
 using namespace std;
 
 #define _DEBUG 0
 
-namespace HIWIN_Puzzle{
+namespace HIWIN_Puzzle {
 	void DEBUG_MSG(string s);
+
+	cv::Mat Transform_Matrix_Count(cv::Mat Camera_Matrix);
+
+	cv::Mat Sharpen(cv::Mat blurImg, cv::Mat &sharpImg, int sigma=3);
 
 	class RotationFinder {
 	private:
@@ -62,28 +67,67 @@ namespace HIWIN_Puzzle{
 		cv::Mat getDebugImg();
 		/*取得輸入圖片*/
 		cv::Mat getOrigImage();
+		/*取得形心*/
+		vector<cv::Point> getCentroids();
+		/*取得包圍框*/
+		vector<cv::Rect> getBoundingBoxes();
 
 
-		
 	private:
 		cv::Mat img_orig, img_onlyPuzz, img_BW_onlyPuzz;
 		cv::Mat mask_ROI, mask_greenBG, mask_wholeBG, mask_noPuzz;
+
+		//你可能會需要調的參數
 		//x, y, width, height
 		cv::Rect rect_ROI = cv::Rect(189, 182, 859, 433);
 		cv::Scalar HSV_Upper = cv::Scalar(68, 255, 152),
-					HSV_Lower = cv::Scalar(24, 0, 0);
+			HSV_Lower = cv::Scalar(24, 0, 0);
 		cv::Size size_orig;
-		int halfBox = 50;
+		int halfBox = 90;
 
 		vector<cv::Mat> puzzles;
+		vector<cv::Point> centroids;
+		vector<cv::Rect> boundingBoxes;
 		cv::Mat img_debug;
 
-		bool modiROI=false, modiHSV=false;;
+		bool modiROI = false, modiHSV = false;;
 
 
 		/*給入contour 回傳形心*/
 		cv::Point Centroid(vector<cv::Point> contour);
 	};
 
+
+	class MarkerFinder
+	{
+	public:
+		MarkerFinder();
+		~MarkerFinder();
+
+		cv::Mat compute(cv::Mat inImage);
+		vector<vector<cv::Point2f>> getCornerPoints();
+		vector<cv::Point2f> getMarkerCenters();
+		cv::Mat getDebugImage();
+		vector<int> getMarkerIds();
+
+		typedef struct markerData_t
+		{
+			cv::Point2f center;
+			vector<cv::Point2f> corners;
+			int id;
+		};
+
+		vector<markerData_t> getMarkerData();
+
+		cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+		cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
+	private:
+		vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
+
+		cv::Mat inImg, debugImage;
+		vector<cv::Point2f> markerCenters;
+		std::vector<int> markerIds;
+		vector<markerData_t> markerDatas;
+	};
 
 }

@@ -7,6 +7,28 @@ void HIWIN_Puzzle::DEBUG_MSG(string s)
 #endif // _DEBUG
 }
 
+cv::Mat HIWIN_Puzzle::Transform_Matrix_Count(cv::Mat Camera_Matrix)
+{
+	float Robot_Value[9] = { 0,30,0,0,0,15,1,1,1 };
+	cv::Mat Robot_Matrix = cv::Mat(cv::Size(3, 3), CV_32FC1, Robot_Value);
+	cv::Mat Camera_Matrix_Inv = Camera_Matrix.inv();
+	cv::Mat Transform_Matrix = Robot_Matrix * Camera_Matrix_Inv;
+	return Transform_Matrix;
+
+}
+
+cv::Mat HIWIN_Puzzle::Sharpen(cv::Mat blurImg, cv::Mat &sharpImg, int sigma)
+{
+	cv::Mat temp=blurImg.clone();
+	//cv::GaussianBlur(blurImg, temp, cv::Size(0, 0), sigma);
+	//cv::addWeighted(blurImg, 1.5, temp, -0.5, 0, temp);
+	
+	cv::Mat kernal = (cv::Mat)
+
+	sharpImg = temp;
+	return temp;
+}
+
 HIWIN_Puzzle::RotationFinder::RotationFinder()
 {
 }
@@ -41,12 +63,14 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 	cv::Mat _puzz_gray;
 	double _maxInDistance, _disp;
 
+	imshow("test1", puzzle);
 	cv::cvtColor(_puzzleCopy, _puzzleCopy, cv::COLOR_RGBA2GRAY);
 	_puzz_gray = _puzzleCopy.clone();
 	cv::distanceTransform(_puzzleCopy, _puzz_distance, cv::DIST_L2, cv::DIST_MASK_3);
-	//imshow("test", _puzz_distance);
+	imshow("test2", _puzz_distance);
 	cv::minMaxLoc(_puzz_distance, &_disp, &_maxInDistance);
 	cv::threshold(_puzz_distance, _puzz_distance, 0.7*_maxInDistance, 255, cv::THRESH_BINARY);
+	imshow("test3", _puzz_distance);
 	_puzz_distance.convertTo(_puzz_distance, CV_8UC1);
 
 	cv::Mat labels, stats, centroids;
@@ -77,7 +101,7 @@ double HIWIN_Puzzle::RotationFinder::find(cv::Mat puzzle)
 	cv::circle(_puzz_gray, centroid_distance, 1, 0, -1);
 	this->angle_result = atan2(centroid_shape.x - centroid_distance.x,
 		centroid_shape.y - centroid_distance.y);
-	//cv::imshow("apple", _puzz_gray);
+	cv::imshow("test4", _puzz_gray);
 
 	cout << centroid_distance << endl;
 	cout << centroid_shape << endl;
@@ -229,6 +253,8 @@ void HIWIN_Puzzle::PuzzleFinder::compute(cv::Mat source)
 		subImg_crop(tempRect).copyTo(subImg_onePuzz);
 
 		puzzles.push_back(subImg_onePuzz.clone());
+		centroids.push_back(centroid);
+		boundingBoxes.push_back(tempRect);
 
 		//make debug img
 		img_debug = source.clone();
@@ -284,6 +310,16 @@ cv::Mat HIWIN_Puzzle::PuzzleFinder::getOrigImage()
 	return img_orig.clone();
 }
 
+vector<cv::Point> HIWIN_Puzzle::PuzzleFinder::getCentroids()
+{
+	return centroids;
+}
+
+vector<cv::Rect> HIWIN_Puzzle::PuzzleFinder::getBoundingBoxes()
+{
+	return boundingBoxes;
+}
+
 cv::Point HIWIN_Puzzle::PuzzleFinder::Centroid(vector<cv::Point> contour)
 {
 	//Moments  mu = moments(contour, false);
@@ -295,3 +331,77 @@ cv::Point HIWIN_Puzzle::PuzzleFinder::Centroid(vector<cv::Point> contour)
 	}
 	return cv::Point(sumx / contour.size(), sumy / contour.size());
 }
+
+//-------------------------------------------------------------------------------
+
+HIWIN_Puzzle::MarkerFinder::MarkerFinder()
+{
+	parameters->cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
+}
+
+HIWIN_Puzzle::MarkerFinder::~MarkerFinder()
+{
+}
+
+cv::Mat HIWIN_Puzzle::MarkerFinder::compute(cv::Mat inImage)
+{
+	inImg = inImage.clone();
+	cv::Mat gray = inImage.clone();
+	cv::cvtColor(gray, gray, cv::COLOR_RGB2GRAY);
+	
+	//¦Ç¶¥¤ÏÂà
+	//gray = 255 - gray;
+	threshold(gray, gray, 200, 255, CV_THRESH_BINARY_INV);
+	cv::Mat show;
+	resize(gray, show, cv::Size(1920, 1080) / 2);
+	cv::imshow("s", show);
+
+	cv::aruco::detectMarkers(gray, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
+
+	return inImage;
+}
+
+vector<vector<cv::Point2f>> HIWIN_Puzzle::MarkerFinder::getCornerPoints()
+{
+	return markerCorners;
+}
+
+vector<cv::Point2f> HIWIN_Puzzle::MarkerFinder::getMarkerCenters()
+{
+	markerCenters.clear();
+	for (auto pts : markerCorners) {
+		markerCenters.push_back( (pts[0] + pts[2]) / 2 );
+	}
+	return markerCenters;
+}
+
+cv::Mat HIWIN_Puzzle::MarkerFinder::getDebugImage()
+{
+	debugImage = inImg.clone();
+	cv::aruco::drawDetectedMarkers(debugImage, markerCorners);
+	return debugImage;
+}
+
+vector<int> HIWIN_Puzzle::MarkerFinder::getMarkerIds()
+{
+	return markerIds;
+}
+
+vector<HIWIN_Puzzle::MarkerFinder::markerData_t> HIWIN_Puzzle::MarkerFinder::getMarkerData()
+{
+	markerDatas.clear();
+	getCornerPoints();
+	getMarkerCenters();
+	getMarkerIds();
+	MarkerFinder::markerData_t temp;
+	for (int i = 0; i < markerIds.size(); i++) {
+		temp.center = markerCenters[i];
+		temp.corners = markerCorners[i];
+		temp.id = markerIds[i];
+
+		markerDatas.push_back(temp);
+	}
+	return markerDatas;
+}
+
+
