@@ -126,7 +126,7 @@ namespace HIWIN_Puzzle {
 		vector<markerData_t> getMarkerData();
 
 		cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-		//cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
+		cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_APRILTAG_36h11);
 	private:
 		vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
 

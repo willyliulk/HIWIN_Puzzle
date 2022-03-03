@@ -341,7 +341,12 @@ cv::Mat HIWIN_Puzzle::MarkerFinder::compute(cv::Mat inImage)
 	//¦Ç¶¥¤ÏÂà
 	threshold(gray, gray, 150, 255, CV_THRESH_BINARY_INV);
 	
-	image_u8_t img_header = { gray.cols, gray.rows, gray.cols, gray.data };
+	cv::aruco::detectMarkers(gray, dictionary, markerCorners, markerIds, parameters, rejectedCandidates);
+
+	return inImage;
+
+
+	/*image_u8_t img_header = { gray.cols, gray.rows, gray.cols, gray.data };
 	apriltag_family_t *tagFamily = tag36h11_create();
 	apriltag_detector_t *detector = apriltag_detector_create();
 	apriltag_detector_add_family(detector, tagFamily);
@@ -381,8 +386,8 @@ cv::Mat HIWIN_Puzzle::MarkerFinder::compute(cv::Mat inImage)
 	tag36h11_destroy(tagFamily);
 	apriltag_detector_destroy(detector);
 	zarray_destroy(detections);
+	return inImage;*/
 
-	return inImage;
 }
 
 vector<vector<cv::Point2f>> HIWIN_Puzzle::MarkerFinder::getCornerPoints()
@@ -392,6 +397,11 @@ vector<vector<cv::Point2f>> HIWIN_Puzzle::MarkerFinder::getCornerPoints()
 
 vector<cv::Point2f> HIWIN_Puzzle::MarkerFinder::getMarkerCenters()
 {
+	markerCenters.clear();
+	for (auto c : markerCorners) {
+		markerCenters.push_back(cv::Point2f(((c[0].x + c[2].x) / 2),
+											((c[0].y + c[2].y) / 2)));
+	}
 	return markerCenters;
 }
 
